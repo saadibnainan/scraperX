@@ -1,0 +1,51 @@
+# ---------------------------------------------------------------------------
+# scraperX — files Claude Code should ignore
+# Keeps secrets, large binaries, generated artifacts, and caches out of context.
+# ---------------------------------------------------------------------------
+
+# Secrets — never surface real credentials/URLs
+.env
+.env.*
+!.env.example
+
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Build / packaging artifacts (large, generated)
+build/
+dist/
+*.spec
+*.manifest
+
+# PyInstaller & bundled browsers
+ms-playwright/
+.cache/
+playwright-report/
+test-results/
+
+# Scraper runtime output & logs
+output/
+logs/
+*.log
+*.csv
+!tests/**/*.csv
+
+# OS / IDE cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
