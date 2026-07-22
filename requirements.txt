@@ -12,9 +12,10 @@
 
 # --- Core scraping engine -------------------------------------------------
 playwright>=1.44,<2.0            # JS-executing headless browser automation
-# NOTE: playwright-stealth's public API changed between the 1.x and 2.x lines.
-#       Phase 2 targets the 1.0.x API; adjust the import if you bump this.
-playwright-stealth>=1.0.6,<2.0   # anti-bot fingerprint patches
+# playwright-stealth's public API differs between 1.x (stealth_sync) and
+# 2.x (Stealth().apply_stealth_sync). The engine supports BOTH, so either
+# line works; 2.x is the current maintained release.
+playwright-stealth>=1.0.6        # anti-bot fingerprint patches
 
 # --- Configuration --------------------------------------------------------
 python-dotenv>=1.0.0             # load .env into the process environment

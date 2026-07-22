@@ -9,10 +9,8 @@ CSV.
 It ships in **two flavours** — a **CLI** and a **modern GUI** — and both can be
 compiled into **standalone Linux binaries** with PyInstaller.
 
-> **Project status:** Phase 1 (Foundation & Architecture). This repository
-> currently contains the project scaffolding and documentation. The scraping
-> engine, interfaces, and build script land in later phases — see
-> [DESIGN.md](DESIGN.md) for the full roadmap.
+> **Project status:** Complete. The engine, CLI, GUI, and build script are all
+> implemented. See [DESIGN.md](DESIGN.md) for the architecture.
 
 ---
 
@@ -104,6 +102,7 @@ Every setting has a sane default, so an empty `.env` still runs. Key variables:
 | ------------------- | --------------------- | -------------------------------------------------------------- |
 | `TARGET_URL`        | *(none)*              | Default start URL when none is given on CLI/GUI.               |
 | `HEADLESS`          | `true`                | Run headless (`true`) or with a visible window (`false`).      |
+| `CHROMIUM_EXECUTABLE_PATH` | *(none)*       | Path to a specific Chromium binary (else Playwright's default).|
 | `PROXY_URL`         | *(none)*              | Single proxy, e.g. `http://host:port`.                         |
 | `PROXY_USERNAME`    | *(none)*              | Auth username for the single proxy.                            |
 | `PROXY_PASSWORD`    | *(none)*              | Auth password for the single proxy.                            |
@@ -126,8 +125,6 @@ Every setting has a sane default, so an empty `.env` still runs. Key variables:
 ---
 
 ## Usage
-
-> The commands below reflect the **planned** interface (implemented in Phase 3).
 
 ### CLI
 
@@ -163,8 +160,8 @@ control, with results written to the chosen CSV path.
 
 ## Building standalone binaries
 
-A `build.sh` script (added in Phase 4) wraps the PyInstaller commands to produce
-two self-contained executables in `dist/`:
+The `build.sh` script wraps the PyInstaller commands to produce two
+self-contained executables in `dist/`:
 
 ```bash
 ./build.sh
@@ -176,6 +173,17 @@ The built binaries still rely on a Playwright-installed Chromium on the host;
 `build.sh` documents how the browser is located at runtime.
 
 ---
+
+## Development & tests
+
+```bash
+pip install -e ".[dev]"     # install with dev extras (pytest, ruff, pyinstaller)
+pytest -q                   # run the unit tests (no browser required)
+```
+
+The unit tests cover the browser-independent logic (config parsing/validation,
+proxy & User-Agent rotation, CSV export). The engine itself is exercised
+manually against live or local pages.
 
 ## Legal & ethical use
 

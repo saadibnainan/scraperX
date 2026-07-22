@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scraperx"
+version = "0.1.0"
+description = "A resilient, JavaScript-executing web scraper with CLI and GUI."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "scraperX" }]
+dependencies = [
+    "playwright>=1.44,<2.0",
+    "playwright-stealth>=1.0.6,<2.0",
+    "python-dotenv>=1.0.0",
+    "tenacity>=8.2.0",
+    "fake-useragent>=1.5.0",
+    "pandas>=2.1.0",
+    "click>=8.1.0",
+    "customtkinter>=5.2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "ruff>=0.4.0", "pyinstaller>=6.3.0"]
+
+[project.scripts]
+scraperx = "scraperx.cli:main"
+scraperx-gui = "scraperx.gui:main"
+
+[tool.setuptools]
+packages = ["scraperx"]
+
+[tool.ruff]
+line-length = 100

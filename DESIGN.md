@@ -159,11 +159,9 @@ The core. Responsibilities:
 
 ## 6. Phased execution plan
 
-| Phase | Scope                                                                                          | Status          |
-| ----- | ---------------------------------------------------------------------------------------------- | --------------- |
-| **1** | Foundation & Architecture: `.gitignore`, `.env.example`, `README.md`, `DESIGN.md`, `requirements.txt` | **This phase**  |
-| **2** | Core Engine: `config.py`, `rotators.py`, `engine.py`, `exporter.py`                            | Awaits approval |
-| **3** | Interfaces: `cli.py` (click), then `gui.py` (CustomTkinter)                                    | Awaits approval |
-| **4** | Compilation: `build.sh` with exact PyInstaller commands for both binaries                      | Awaits approval |
-
-Each phase is reviewed and approved before the next begins.
+| Phase | Scope                                                                                          | Status    |
+| ----- | ---------------------------------------------------------------------------------------------- | --------- |
+| **1** | Foundation & Architecture: `.gitignore`, `.env.example`, `README.md`, `DESIGN.md`, `requirements.txt` | ✅ Done |
+| **2** | Core Engine: `config.py`, `rotators.py`, `engine.py`, `exporter.py`                            | ✅ Done    |
+| **3** | Interfaces: `cli.py` (click), `gui.py` (CustomTkinter)                                         | ✅ Done    |
+| **4** | Compilation: `build.sh` with PyInstaller commands for both binaries                            | ✅ Done    |
