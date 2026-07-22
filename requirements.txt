@@ -1,0 +1,41 @@
+# ===========================================================================
+# scraperX — Python dependencies
+# ---------------------------------------------------------------------------
+# Install:
+#     pip install -r requirements.txt
+#     playwright install chromium        # fetches the browser binary
+#
+# Versions are pinned with a lower bound (>=) to stay reproducible while
+# allowing security patches. If you need fully-frozen builds for release
+# binaries, run `pip freeze > requirements.lock.txt` after installing.
+# ===========================================================================
+
+# --- Core scraping engine -------------------------------------------------
+playwright>=1.44,<2.0            # JS-executing headless browser automation
+# playwright-stealth's public API differs between 1.x (stealth_sync) and
+# 2.x (Stealth().apply_stealth_sync). The engine supports BOTH, so either
+# line works; 2.x is the current maintained release.
+playwright-stealth>=1.0.6        # anti-bot fingerprint patches
+
+# --- Configuration --------------------------------------------------------
+python-dotenv>=1.0.0             # load .env into the process environment
+
+# --- Resilience helpers ---------------------------------------------------
+tenacity>=8.2.0                  # retry with exponential backoff + jitter
+fake-useragent>=1.5.0            # rotating pool of realistic User-Agent strings
+
+# --- Data export ----------------------------------------------------------
+pandas>=2.1.0                    # DataFrame handling + CSV export
+
+# --- CLI ------------------------------------------------------------------
+click>=8.1.0                     # command-line interface
+
+# --- GUI ------------------------------------------------------------------
+customtkinter>=5.2.0             # modern themed Tkinter widgets
+
+# --- Packaging ------------------------------------------------------------
+pyinstaller>=6.3.0               # build standalone Linux binaries
+
+# --- Dev (optional; uncomment to install) ---------------------------------
+# pytest>=8.0.0
+# ruff>=0.4.0

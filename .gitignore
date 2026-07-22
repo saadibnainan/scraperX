@@ -1,0 +1,87 @@
+# ---------------------------------------------------------------------------
+# scraperX — Python .gitignore
+# ---------------------------------------------------------------------------
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+downloads/
+develop-eggs/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  build.sh regenerates the spec, so we don't track it
+*.manifest
+*.spec
+
+# Virtual environments
+.env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Secrets & local configuration
+#  .env holds real proxy creds / URLs — never commit it.
+#  .env.example IS tracked (see negation below).
+.env
+.env.*
+!.env.example
+
+# Scraper runtime output & logs
+output/
+logs/
+*.log
+*.csv
+!tests/**/*.csv
+
+# Playwright / browser caches
+.cache/
+ms-playwright/
+playwright-report/
+test-results/
+
+# Testing / linting / typing caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS cruft
+.DS_Store
+Thumbs.db
