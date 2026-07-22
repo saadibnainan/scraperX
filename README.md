@@ -33,6 +33,66 @@ compiled into **standalone Linux binaries** with PyInstaller.
 
 ---
 
+## Quick Start
+
+Get from zero to your first scrape in a few steps.
+
+**1. Clone the project**
+```bash
+git clone <your-fork-url> scraperX && cd scraperX
+```
+
+**2. Create and activate a virtual environment**
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+**3. Install the Python dependencies**
+```bash
+pip install -r requirements.txt
+```
+
+**4. Install the Chromium browser**
+```bash
+playwright install chromium
+```
+> You also need Chromium's system libraries (and Tk, if you use the GUI). See
+> [System dependencies](#system-dependencies) for the one-time Arch/Debian commands.
+
+**5. Create your config (optional)**
+```bash
+cp .env.example .env
+```
+Every setting has a sane default, so this step is optional. Edit `.env` only if
+you need proxies, custom User-Agents, or different defaults.
+
+**6. Run your first scrape (CLI)**
+```bash
+python -m scraperx.cli --url https://example.com --selector "h1, p" --output output/results.csv
+```
+
+**7. …or launch the GUI**
+```bash
+python -m scraperx.gui
+```
+Enter a URL and CSS selector, pick an output path, then click **Start**.
+
+**8. Read your results**
+The scraped rows are written to `output/results.csv` (or whatever you passed to
+`--output` / set as `OUTPUT_PATH`). Open it in any spreadsheet or with pandas.
+
+**9. Build standalone binaries (optional)**
+```bash
+./build.sh    # → dist/scraperx (CLI) and dist/scraperx-gui (GUI)
+```
+
+> **Tip:** run `pip install -e .` once to install scraperX as a package — then you
+> can use the shorter `scraperx` and `scraperx-gui` commands anywhere, instead of
+> the `python -m scraperx.cli` / `python -m scraperx.gui` module form.
+
+---
+
 ## Requirements
 
 - **OS:** Linux — primarily tested on **Arch**; **Debian/Ubuntu** supported.
@@ -142,9 +202,10 @@ scraperx --url https://example.com --headful
 scraperx --url https://example.com --proxy http://user:pass@host:port
 ```
 
-Common flags (planned): `--url`, `--selector`, `--output`, `--depth`,
+Common flags: `--url`, `--selector`, `--output`, `--depth`,
 `--headful/--headless`, `--proxy`, `--max-retries`, `--log-level`. Run
-`scraperx --help` for the full list.
+`python -m scraperx.cli --help` (or `scraperx --help` after `pip install -e .`)
+for the full list.
 
 ### GUI
 
