@@ -338,6 +338,32 @@ source .venv/bin/activate.fish
 Or skip activation entirely and call the venv's Python directly:
 `.venv/bin/python -m scraperx.cli --url https://example.com`.
 
+### `No module named 'scraperx'`
+
+`python -m scraperx.gui` / `scraperx.cli` only finds the package when **both** of
+these are true:
+
+1. Your **virtualenv is active** (otherwise you're on system Python, which lacks
+   the dependencies — you'll see `/usr/bin/python` in the error).
+2. You're running from the **repository root** (the folder that contains the
+   `scraperx/` directory), because `-m` resolves packages from the current
+   directory.
+
+```fish
+cd /path/to/scraperX
+source .venv/bin/activate.fish     # bash/zsh: source .venv/bin/activate
+python -m scraperx.gui
+```
+
+**Run from anywhere:** install the package once, then use the console commands —
+they don't care about your working directory:
+
+```fish
+pip install -e .
+scraperx-gui
+scraperx --url https://example.com --selector "h1, p"
+```
+
 ### Chromium fails to launch / can't be found
 
 Ensure the browser is installed (`playwright install chromium`) and its system
