@@ -7,7 +7,7 @@ import pytest
 
 from scraperx.config import Config, _as_bool, _as_int, _as_list
 from scraperx.rotators import ProxyRotator, UserAgentRotator, _parse_proxy
-from scraperx.exporter import DataExporter
+from scraperx.exporter import DataExporter, domain_slug
 
 
 # --- config parsing --------------------------------------------------------
@@ -108,3 +108,34 @@ def test_exporter_empty(tmp_path):
     exp = DataExporter(str(out))
     path = exp.export([])
     assert os.path.exists(path)
+
+
+# --- domain slug / per-site export -----------------------------------------
+def test_domain_slug():
+    assert domain_slug("https://sub.Example.com/path") == "sub.example.com"
+    assert domain_slug("http://host:8080/x") == "host_8080"
+    assert domain_slug("example.org") == "example.org"
+    assert domain_slug("") == "site"
+
+
+def test_export_by_site_names_files_by_domain(tmp_path):
+    out = tmp_path / "out" / "results.csv"
+    exp = DataExporter(str(out))
+    written = exp.export_by_site([
+        {"website": "a.com", "source_url": "https://a.com/1", "text": "x"},
+        {"website": "a.com", "source_url": "https://a.com/2", "text": "y"},
+        {"website": "b.org", "source_url": "https://b.org/1", "text": "z"},
+    ])
+    assert set(written.keys()) == {"a.com", "b.org"}
+    assert os.path.basename(written["a.com"]) == "a.com.csv"
+    assert os.path.basename(written["b.org"]) == "b.org.csv"
+    assert pd.read_csv(written["a.com"]).shape[0] == 2
+    assert pd.read_csv(written["b.org"]).shape[0] == 1
+
+
+def test_export_by_site_falls_back_to_source_url_domain(tmp_path):
+    out = tmp_path / "results.csv"
+    exp = DataExporter(str(out))
+    written = exp.export_by_site([{"source_url": "https://c.net/x", "text": "t"}])
+    assert "c.net" in written
+    assert os.path.basename(written["c.net"]) == "c.net.csv"

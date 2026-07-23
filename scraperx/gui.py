@@ -10,10 +10,9 @@ from __future__ import annotations
 
 import logging
 import queue
+import sys
 import threading
 from typing import Optional
-
-import customtkinter as ctk
 
 from . import __version__
 from .config import Config
@@ -22,6 +21,46 @@ from .exporter import DataExporter
 from .logconf import setup_logging
 
 log = logging.getLogger("scraperx.gui")
+
+# CustomTkinter depends on Tk (the _tkinter C extension + libtk shared library).
+# On a machine missing the Tk runtime the import raises ImportError. We catch it
+# here so the GUI can exit with actionable install guidance instead of a raw
+# traceback. ``_Base`` lets the class definition below succeed even without Tk.
+try:
+    import customtkinter as ctk  # noqa: E402
+
+    _CTK_IMPORT_ERROR: Optional[BaseException] = None
+    _Base = ctk.CTk
+except BaseException as _exc:  # noqa: BLE001 — Tk can fail with more than ImportError
+    ctk = None  # type: ignore[assignment]
+    _CTK_IMPORT_ERROR = _exc
+    _Base = object
+
+
+_TK_HELP = """\
+scraperX GUI could not start because Tk (the Tkinter GUI runtime) is not
+available for this Python. CustomTkinter needs it.
+
+Install Tk, then re-run `scraperx-gui` / `python -m scraperx.gui`:
+
+  Arch / Manjaro:    sudo pacman -S tk
+  Debian / Ubuntu:   sudo apt-get install python3-tk tk
+  Fedora / RHEL:     sudo dnf install python3-tkinter tk
+  openSUSE:          sudo zypper install python3-tk tk
+  macOS (Homebrew):  brew install python-tk
+
+If you use a virtualenv built against a Python that lacks Tk, recreate it with a
+Python that has Tk support after installing the package above.
+
+Prefer no GUI? The CLI needs no Tk:
+  python -m scraperx.cli --url https://example.com --selector "h1, p"
+
+Underlying import error: {error}
+"""
+
+
+def _tk_unavailable_message() -> str:
+    return _TK_HELP.format(error=_CTK_IMPORT_ERROR)
 
 
 class _QueueLogHandler(logging.Handler):
@@ -40,7 +79,7 @@ class _QueueLogHandler(logging.Handler):
             pass
 
 
-class ScraperApp(ctk.CTk):
+class ScraperApp(_Base):
     def __init__(self):
         super().__init__()
         self.title(f"scraperX {__version__}")
@@ -134,6 +173,11 @@ class ScraperApp(ctk.CTk):
         if cfg.same_domain:
             self.same_domain_switch.select()
 
+        self.per_site_switch = ctk.CTkSwitch(toggles, text="One CSV per site")
+        self.per_site_switch.pack(side="left", padx=10)
+        if cfg.group_by_site:
+            self.per_site_switch.select()
+
         # Buttons
         buttons = ctk.CTkFrame(self, fg_color="transparent")
         buttons.grid(row=3, column=0, padx=20, pady=(0, 8), sticky="ew")
@@ -193,6 +237,7 @@ class ScraperApp(ctk.CTk):
                 headless=bool(self.headless_switch.get()),
                 extract_links=bool(self.links_switch.get()),
                 same_domain=bool(self.same_domain_switch.get()),
+                group_by_site=bool(self.per_site_switch.get()),
             )
         except (ValueError, AttributeError) as exc:
             self._append_log(f"Config error: {exc}")
@@ -220,8 +265,17 @@ class ScraperApp(ctk.CTk):
         try:
             with ScraperEngine(config, should_stop=self._stop_event.is_set) as engine:
                 records = engine.run()
-            path = exporter.export(records)
-            self._log_queue.put(f"Done. Wrote {len(records)} record(s) to {path}")
+            if config.group_by_site:
+                written = exporter.export_by_site(records)
+                self._log_queue.put(
+                    f"Done. Wrote {len(records)} record(s) across "
+                    f"{len(written)} site file(s):"
+                )
+                for site, path in written.items():
+                    self._log_queue.put(f"  {site} -> {path}")
+            else:
+                path = exporter.export(records)
+                self._log_queue.put(f"Done. Wrote {len(records)} record(s) to {path}")
             self.after(0, lambda: self.status_label.configure(text=f"Done ({len(records)})"))
         except Exception as exc:  # noqa: BLE001
             self._log_queue.put(f"ERROR: {exc}")
@@ -239,6 +293,10 @@ class ScraperApp(ctk.CTk):
 
 
 def main() -> None:
+    if ctk is None:
+        # Tk isn't available — print actionable guidance instead of a traceback.
+        print(_tk_unavailable_message(), file=sys.stderr)
+        raise SystemExit(1)
     setup_logging("INFO")
     app = ScraperApp()
     app.mainloop()

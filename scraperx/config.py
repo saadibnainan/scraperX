@@ -112,6 +112,9 @@ class Config:
 
     # Output & logging
     output_path: str = "output/results.csv"
+    # When True, write one CSV per website (named after the domain) into the
+    # directory of output_path. When False, write everything to output_path.
+    group_by_site: bool = True
     log_level: str = "INFO"
 
     # ------------------------------------------------------------------
@@ -147,6 +150,7 @@ class Config:
             same_domain=_as_bool(_get("SAME_DOMAIN"), True),
             extract_links=_as_bool(_get("EXTRACT_LINKS"), True),
             output_path=_get("OUTPUT_PATH") or "output/results.csv",
+            group_by_site=_as_bool(_get("GROUP_BY_SITE"), True),
             log_level=(_get("LOG_LEVEL") or "INFO").upper(),
         )
 

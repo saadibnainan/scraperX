@@ -38,17 +38,56 @@ RETRYABLE_STATUSES = {429, 500, 502, 503, 504, 520, 521, 522, 523, 524}
 _ELEMENT_JS = """(sel) => Array.from(document.querySelectorAll(sel)).map((e, i) => ({
     index: i,
     tag: e.tagName ? e.tagName.toLowerCase() : '',
-    text: (e.textContent || '').trim(),
-    html: e.outerHTML,
+    text: (e.textContent || '').trim().replace(/\\s+/g, ' '),
     href: e.getAttribute('href'),
     src: e.getAttribute('src'),
+    element_id: e.id || '',
+    element_class: e.getAttribute('class') || '',
+    alt: e.getAttribute('alt') || '',
+    title_attr: e.getAttribute('title') || '',
+    html: e.outerHTML,
 }))"""
 
-# JS run in-page to collect anchors as absolute URLs.
+# JS run in-page to collect anchors as absolute URLs, with link text and rel.
 _LINK_JS = """() => Array.from(document.querySelectorAll('a[href]')).map((e) => ({
     href: e.href,
-    text: (e.textContent || '').trim(),
+    text: (e.textContent || '').trim().replace(/\\s+/g, ' '),
+    rel: e.getAttribute('rel') || '',
 }))"""
+
+# JS run in-page to gather rich page-level metadata ("more details").
+_PAGE_META_JS = """() => {
+    const meta = (sel) => {
+        const el = document.querySelector(sel);
+        return el ? (el.getAttribute('content') || '') : '';
+    };
+    const bodyText = (document.body ? document.body.innerText : '') || '';
+    const words = bodyText.trim() ? bodyText.trim().split(/\\s+/).length : 0;
+    const canonical = document.querySelector('link[rel="canonical"]');
+    const h1 = document.querySelector('h1');
+    return {
+        meta_description: meta('meta[name="description"]'),
+        meta_keywords: meta('meta[name="keywords"]'),
+        meta_author: meta('meta[name="author"]'),
+        og_title: meta('meta[property="og:title"]'),
+        og_description: meta('meta[property="og:description"]'),
+        og_image: meta('meta[property="og:image"]'),
+        og_site_name: meta('meta[property="og:site_name"]'),
+        canonical_url: canonical ? canonical.href : '',
+        lang: document.documentElement.getAttribute('lang') || '',
+        h1_text: h1 ? (h1.textContent || '').trim().replace(/\\s+/g, ' ') : '',
+        num_links: document.querySelectorAll('a[href]').length,
+        num_images: document.querySelectorAll('img').length,
+        num_headings: document.querySelectorAll('h1,h2,h3,h4,h5,h6').length,
+        word_count: words,
+    };
+}"""
+
+
+def _domain_of(url: str) -> str:
+    """Return the host (netloc without credentials/port) of a URL, or ''."""
+    host = urlparse(url).hostname or ""
+    return host
 
 
 class RetryableError(Exception):
@@ -64,6 +103,7 @@ class FetchResult:
     title: str = ""
     elements: List[Dict] = field(default_factory=list)
     links: List[Dict] = field(default_factory=list)
+    meta: Dict = field(default_factory=dict)
 
 
 class ScraperEngine:
@@ -202,8 +242,14 @@ class ScraperEngine:
             except PlaywrightError:
                 pass
 
+            meta: Dict = {}
+            try:
+                meta = page.evaluate(_PAGE_META_JS) or {}
+            except PlaywrightError:
+                meta = {}
+
             return FetchResult(url=url, status=status, title=title,
-                               elements=elements, links=links)
+                               elements=elements, links=links, meta=meta)
         finally:
             context.close()
 
@@ -326,12 +372,34 @@ class ScraperEngine:
     # ------------------------------------------------------------------
     def _build_records(self, result: FetchResult, depth: int) -> List[Dict]:
         rows: List[Dict] = []
+        meta = result.meta or {}
         base = {
+            "website": _domain_of(result.url),
             "source_url": result.url,
             "depth": depth,
             "http_status": result.status,
             "page_title": result.title,
         }
+
+        # Always emit a rich page-level record ("more details from the website").
+        rows.append({
+            **base,
+            "record_type": "page",
+            "meta_description": meta.get("meta_description"),
+            "meta_keywords": meta.get("meta_keywords"),
+            "meta_author": meta.get("meta_author"),
+            "og_title": meta.get("og_title"),
+            "og_description": meta.get("og_description"),
+            "og_image": meta.get("og_image"),
+            "og_site_name": meta.get("og_site_name"),
+            "canonical_url": meta.get("canonical_url"),
+            "lang": meta.get("lang"),
+            "h1_text": meta.get("h1_text"),
+            "num_links": meta.get("num_links"),
+            "num_images": meta.get("num_images"),
+            "num_headings": meta.get("num_headings"),
+            "word_count": meta.get("word_count"),
+        })
 
         for el in result.elements:
             rows.append({
@@ -343,6 +411,10 @@ class ScraperEngine:
                 "text": el.get("text"),
                 "href": el.get("href"),
                 "src": el.get("src"),
+                "element_id": el.get("element_id"),
+                "element_class": el.get("element_class"),
+                "alt": el.get("alt"),
+                "title_attr": el.get("title_attr"),
                 "html": el.get("html"),
             })
 
@@ -353,12 +425,8 @@ class ScraperEngine:
                     "record_type": "link",
                     "text": link.get("text"),
                     "href": link.get("href"),
+                    "rel": link.get("rel"),
                 })
-
-        # If nothing was extracted and links weren't requested, still emit a
-        # page-level row so the crawl is visible in the output.
-        if not rows:
-            rows.append({**base, "record_type": "page"})
 
         return rows
 
