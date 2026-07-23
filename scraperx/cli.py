@@ -39,6 +39,9 @@ log = logging.getLogger("scraperx.cli")
               help="Minimum delay between requests to the same host (ms).")
 @click.option("--extract-links/--no-extract-links", "extract_links", default=None,
               help="Include discovered links as rows in the CSV.")
+@click.option("--per-site/--single-file", "group_by_site", default=None,
+              help="Write one CSV per website named after its domain (default), "
+                   "or everything into a single --output file.")
 @click.option("--same-domain/--any-domain", "same_domain", default=None,
               help="Restrict crawling to the start URL's domain (default: same-domain).")
 @click.option("--append", is_flag=True, default=False,
@@ -59,6 +62,7 @@ def main(
     rate_limit_ms,
     extract_links,
     same_domain,
+    group_by_site,
     append,
     log_level,
 ):
@@ -84,6 +88,7 @@ def main(
             rate_limit_ms=rate_limit_ms,
             extract_links=extract_links,
             same_domain=same_domain,
+            group_by_site=group_by_site,
             log_level=(log_level.upper() if log_level else None),
         )
     except (ValueError, AttributeError) as exc:
@@ -112,8 +117,14 @@ def main(
     if not records:
         click.echo("No records extracted.", err=True)
 
-    path = exporter.export(records, append=append)
-    click.echo(f"Done. Wrote {len(records)} record(s) to {path}")
+    if config.group_by_site:
+        written = exporter.export_by_site(records)
+        click.echo(f"Done. Wrote {len(records)} record(s) across {len(written)} site file(s):")
+        for site, path in written.items():
+            click.echo(f"  {site} -> {path}")
+    else:
+        path = exporter.export(records, append=append)
+        click.echo(f"Done. Wrote {len(records)} record(s) to {path}")
 
 
 if __name__ == "__main__":

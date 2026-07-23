@@ -177,7 +177,8 @@ Every setting has a sane default, so an empty `.env` still runs. Key variables:
 | `CONCURRENCY`       | `1`                   | Pages fetched in parallel.                                     |
 | `CRAWL_DEPTH`       | `1`                   | Link-hops to follow (`0` = start page only).                   |
 | `RATE_LIMIT_MS`     | `1000`                | Minimum delay between requests to the same host.               |
-| `OUTPUT_PATH`       | `output/results.csv`  | Where the CSV is written.                                      |
+| `OUTPUT_PATH`       | `output/results.csv`  | Output file (single-file mode) / output **directory** (per-site).|
+| `GROUP_BY_SITE`     | `true`                | Write one CSV per website (named by domain) vs. one combined file.|
 | `LOG_LEVEL`         | `INFO`                | `DEBUG` / `INFO` / `WARNING` / `ERROR`.                        |
 
 > ⚠️ **Never commit `.env`.** It is gitignored; only `.env.example` is tracked.
@@ -189,23 +190,31 @@ Every setting has a sane default, so an empty `.env` still runs. Key variables:
 ### CLI
 
 ```bash
-# Basic: scrape a URL, extract elements by selector, write CSV
-scraperx --url https://example.com --selector "article h2" --output out.csv
+# Basic: scrape a URL, extract elements by selector
+# → writes output/example.com.csv (named after the website)
+python -m scraperx.cli --url https://example.com --selector "article h2"
 
 # Crawl links two hops deep
-scraperx --url https://example.com --depth 2
+python -m scraperx.cli --url https://example.com --depth 2
+
+# Put everything in one combined file instead of per-site files
+python -m scraperx.cli --url https://example.com --single-file --output out.csv
 
 # Debug a bot-wall in a visible browser window
-scraperx --url https://example.com --headful
+python -m scraperx.cli --url https://example.com --headful
 
 # Route through a proxy
-scraperx --url https://example.com --proxy http://user:pass@host:port
+python -m scraperx.cli --url https://example.com --proxy http://user:pass@host:port
 ```
 
 Common flags: `--url`, `--selector`, `--output`, `--depth`,
-`--headful/--headless`, `--proxy`, `--max-retries`, `--log-level`. Run
-`python -m scraperx.cli --help` (or `scraperx --help` after `pip install -e .`)
+`--headful/--headless`, `--per-site/--single-file`, `--proxy`, `--max-retries`,
+`--rate-limit-ms`, `--extract-links`, `--same-domain/--any-domain`, `--log-level`.
+Run `python -m scraperx.cli --help` (or `scraperx --help` after `pip install -e .`)
 for the full list.
+
+> After `pip install -e .` you can use the shorter `scraperx` command instead of
+> `python -m scraperx.cli`.
 
 ### GUI
 
@@ -216,6 +225,55 @@ scraperx-gui
 The GUI exposes the same engine: a URL field, selector input, a headless/headful
 toggle, proxy settings, a depth control, a live log pane, and a **Start / Stop**
 control, with results written to the chosen CSV path.
+
+---
+
+## Output
+
+By default scraperX writes **one CSV per website**, named after the site's
+domain, into the directory of `OUTPUT_PATH`:
+
+```
+output/
+├── example.com.csv
+├── docs.example.com.csv
+└── another-site.org.csv
+```
+
+- The filename is the source page's host (`sub.example.com` → `sub.example.com.csv`;
+  a port becomes `host_8080.csv`). This is the default because a crawl of one site
+  naturally lands in one file per site.
+- Pass `--single-file` (or set `GROUP_BY_SITE=false`) to write everything into the
+  single `--output` path instead.
+
+### CSV schema
+
+Every scraped page yields one **`page`** row of rich metadata, plus one
+**`element`** row per selector match and (when link extraction is on) one
+**`link`** row per anchor. Columns are a stable superset — a given row only fills
+the ones relevant to its `record_type`:
+
+| Column | Applies to | Meaning |
+| ------ | ---------- | ------- |
+| `website` | all | Source domain (also the file's name). |
+| `source_url` | all | URL the row came from. |
+| `depth` | all | Crawl depth (0 = start page). |
+| `http_status` | all | HTTP status of the page. |
+| `record_type` | all | `page`, `element`, or `link`. |
+| `page_title` | all | `<title>` of the page. |
+| `meta_description` / `meta_keywords` / `meta_author` | page | Standard `<meta>` tags. |
+| `og_title` / `og_description` / `og_image` / `og_site_name` | page | OpenGraph tags. |
+| `canonical_url` | page | `<link rel="canonical">`. |
+| `lang` | page | `<html lang>`. |
+| `h1_text` | page | First `<h1>` text. |
+| `num_links` / `num_images` / `num_headings` / `word_count` | page | Page-level counts. |
+| `selector` | element | The CSS selector that matched. |
+| `element_index` / `tag` | element | Match index and tag name. |
+| `text` | element, link | Normalised text content. |
+| `href` / `src` | element, link | Link target / media source. |
+| `rel` | link | Anchor `rel` attribute. |
+| `element_id` / `element_class` / `alt` / `title_attr` | element | Element attributes. |
+| `html` | element | The element's outer HTML. |
 
 ---
 
@@ -243,8 +301,50 @@ pytest -q                   # run the unit tests (no browser required)
 ```
 
 The unit tests cover the browser-independent logic (config parsing/validation,
-proxy & User-Agent rotation, CSV export). The engine itself is exercised
-manually against live or local pages.
+proxy & User-Agent rotation, CSV export, per-site file naming). The engine itself
+is exercised manually against live or local pages.
+
+---
+
+## Troubleshooting
+
+### GUI: `ImportError: libtk8.6.so` / `No module named 'tkinter'`
+
+CustomTkinter needs the **Tk runtime**, which isn't bundled with Python. Install
+it for your distro, then re-run the GUI:
+
+```bash
+# Arch / Manjaro
+sudo pacman -S tk
+# Debian / Ubuntu
+sudo apt-get install python3-tk tk
+# Fedora / RHEL
+sudo dnf install python3-tkinter tk
+```
+
+If your virtualenv was built against a Python that lacks Tk, recreate the venv
+**after** installing the package above. The CLI never needs Tk, so it works
+regardless.
+
+### `source .venv/bin/activate` fails in the fish shell
+
+fish can't read the bash activation script (you'll see
+`'case' builtin not inside of switch block`). Use the fish-specific one:
+
+```fish
+source .venv/bin/activate.fish
+```
+
+Or skip activation entirely and call the venv's Python directly:
+`.venv/bin/python -m scraperx.cli --url https://example.com`.
+
+### Chromium fails to launch / can't be found
+
+Ensure the browser is installed (`playwright install chromium`) and its system
+libraries are present (see [System dependencies](#system-dependencies)). To use a
+specific Chromium build, set `CHROMIUM_EXECUTABLE_PATH` in `.env`.
+
+---
 
 ## Legal & ethical use
 

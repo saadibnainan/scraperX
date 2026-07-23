@@ -128,9 +128,14 @@ The core. Responsibilities:
    fields, discovered links) to the exporter.
 
 ### `DataExporter` (`exporter.py`)
-- Accumulates records into a pandas DataFrame.
-- Writes CSV to `OUTPUT_PATH`, creating parent dirs; supports append vs.
-  overwrite and stable column ordering.
+- Accumulates records into a pandas DataFrame with stable column ordering.
+- `export()` writes a single combined CSV (append or overwrite).
+- `export_by_site()` groups records by source domain and writes one CSV per
+  website, named after the domain (`domain_slug()` sanitises the host into a
+  filesystem-safe stem). This is the default output mode (`GROUP_BY_SITE`).
+- Each page produces a rich `page` metadata row (title, description, OpenGraph,
+  canonical, lang, and link/image/heading/word counts) alongside `element` and
+  `link` rows.
 
 ### Entry points
 - **`cli.py`** — `click` command exposing the config surface as flags
